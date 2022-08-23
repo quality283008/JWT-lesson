@@ -7,8 +7,28 @@ const { User } = require("../db/user");
 const bcrypt = require("bcrypt");
 const JWT = require("jsonwebtoken");
 
+const fs = require("fs");
+const path = require("path");
+
+const url = path.join(__dirname, '../db/user.json');
+
+const feachData = () => {
+  try {
+    const jsonFile = fs.readFileSync(url)
+    return JSON.parse(jsonFile);
+  } catch (err) {
+    console.log(err.message);
+    return err.message;
+  }
+}
+
+const writeData = (data) => {
+  fs.writeFileSync(url, JSON.stringify(data, null, 2))
+}
+
 router.get('/', (req,res) => {
-  return res.send(User)
+  const userData = feachData();
+  return res.send(userData)
 });
 
 // サインインの処理
@@ -26,7 +46,8 @@ router.post('/signin',
     };
 
     // リクエストされたメールアドレスが既に登録されているか判定
-    const user = User.find((user) => user.email === email);
+    const userData = feachData();
+    const user = userData.find((user) => user.email === email);
     if(user) {
       return res.status(400).json({ massage: "すでに存在するユーザーです。" })
     }
@@ -35,10 +56,12 @@ router.post('/signin',
     let hashedPassword = await bcrypt.hash(password, 10)
 
     // userリストに追加する
-    User.push({
+    userData.push({
       email,
       password: hashedPassword,
     });
+
+    writeData(userData);
 
     const token = await JWT.sign(
       {
